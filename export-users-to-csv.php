@@ -1,18 +1,19 @@
 <?php
 /**
  * @package Export_Users_to_CSV
- * @version 0.2
+ * @version 0.3
  */
 /*
 Plugin Name: Export Users to CSV
 Plugin URI: http://pubpoet.com/plugins/
 Description: Export Users data and metadata to a csv file.
-Version: 0.2
+Version: 0.3
 Author: PubPoet
 Author URI: http://pubpoet.com/
 License: GPL2
+Text Domain: export-users-to-csv
 */
-/*  Copyright 2011  Ulrich Sossou  (email : sorich87@gmail.com)
+/*  Copyright 2011  Ulrich Sossou  (http://github.com/sorich87)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License, version 2, as
@@ -27,6 +28,8 @@ License: GPL2
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+
+load_plugin_textdomain( 'export-users-to-csv', false, basename( dirname( __FILE__ ) ) . '/languages' );
 
 /**
  * Main plugin class
@@ -52,7 +55,7 @@ class PP_EU_Export_Users {
 	 * @since 0.1
 	 **/
 	public function add_admin_pages() {
-		add_users_page( __( 'Export to CSV' ), __( 'Export to CSV' ), 'list_users', 'export-users-to-csv', array( $this, 'users_page' ) );
+		add_users_page( __( 'Export to CSV', 'export-users-to-csv' ), __( 'Export to CSV', 'export-users-to-csv' ), 'list_users', 'export-users-to-csv', array( $this, 'users_page' ) );
 	}
 
 	/**
@@ -132,25 +135,25 @@ class PP_EU_Export_Users {
 	 **/
 	public function users_page() {
 		if ( ! current_user_can( 'list_users' ) )
-			wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+			wp_die( __( 'You do not have sufficient permissions to access this page.', 'export-users-to-csv' ) );
 ?>
 
 <div class="wrap">
-	<h2><?php _e( 'Export users to a CSV file' ); ?></h2>
+	<h2><?php _e( 'Export users to a CSV file', 'export-users-to-csv' ); ?></h2>
 	<?php
 	if ( isset( $_GET['error'] ) ) {
-		echo '<div class="updated"><p><strong>' . __( 'No user found.' ) . '</strong></p></div>';
+		echo '<div class="updated"><p><strong>' . __( 'No user found.', 'export-users-to-csv' ) . '</strong></p></div>';
 	}
 	?>
 	<form method="post" action="" enctype="multipart/form-data">
 		<?php wp_nonce_field( 'pp-eu-export-users-users-page_export', '_wpnonce-pp-eu-export-users-users-page_export' ); ?>
 		<table class="form-table">
 			<tr valign="top">
-				<th scope="row"><label for"pp_eu_users_role"><?php _e( 'Role' ); ?></label></th>
+				<th scope="row"><label for"pp_eu_users_role"><?php _e( 'Role', 'export-users-to-csv' ); ?></label></th>
 				<td>
 					<select name="role" id="pp_eu_users_role">
 						<?php
-						echo '<option value="">' . __( 'Every Role' ) . '</option>';
+						echo '<option value="">' . __( 'Every Role', 'export-users-to-csv' ) . '</option>';
 						global $wp_roles;
 						foreach ( $wp_roles->role_names as $role => $name ) {
 							echo "\n\t<option value='" . esc_attr( $role ) . "'>$name</option>";
@@ -160,14 +163,14 @@ class PP_EU_Export_Users {
 				</td>
 			</tr>
 			<tr valign="top">
-				<th scope="row"><label><?php _e( 'Date range' ); ?></label></th>
+				<th scope="row"><label><?php _e( 'Date range', 'export-users-to-csv' ); ?></label></th>
 				<td>
 					<select name="start_date" id="pp_eu_users_start_date">
-						<option value="0"><?php _e( 'Start Date' ); ?></option>
+						<option value="0"><?php _e( 'Start Date', 'export-users-to-csv' ); ?></option>
 						<?php $this->export_date_options(); ?>
 					</select>
 					<select name="end_date" id="pp_eu_users_end_date">
-						<option value="0"><?php _e( 'End Date' ); ?></option>
+						<option value="0"><?php _e( 'End Date', 'export-users-to-csv' ); ?></option>
 						<?php $this->export_date_options(); ?>
 					</select>
 				</td>
@@ -175,7 +178,7 @@ class PP_EU_Export_Users {
 		</table>
 		<p class="submit">
 			<input type="hidden" name="_wp_http_referer" value="<?php echo $_SERVER['REQUEST_URI'] ?>" />
-			<input type="submit" class="button-primary" value="<?php _e( 'Export' ); ?>" />
+			<input type="submit" class="button-primary" value="<?php _e( 'Export', 'export-users-to-csv' ); ?>" />
 		</p>
 	</form>
 <?php
@@ -193,7 +196,7 @@ class PP_EU_Export_Users {
 		$where = '';
 
 		if ( ! empty( $_POST['start_date'] ) )
-			$where .= $wpdb->prepare( " AND $wpdb->users.user_registered >= %s", date( 'Y-m-d', strtotime($_POST['start_date']) ) );
+			$where .= $wpdb->prepare( " AND $wpdb->users.user_registered >= %s", date( 'Y-m-d', strtotime( $_POST['start_date'] ) ) );
 
 		if ( ! empty( $_POST['end_date'] ) )
 			$where .= $wpdb->prepare( " AND $wpdb->users.user_registered < %s", date( 'Y-m-d', strtotime( '+1 month', strtotime( $_POST['end_date'] ) ) ) );
