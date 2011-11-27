@@ -69,14 +69,6 @@ class PP_EU_Export_Users {
 				'role' => stripslashes( $_POST['role'] )
 			);
 
-			if ( ! empty( $args['role'] ) ) {
-				global $wp_roles;
-				$roles = array_keys( $wp_roles->role_names );
-
-				if ( ! in_array( $_POST['role'], $roles ) )
-					$args['role'] = '';
-			}
-
 			add_action( 'pre_user_query', array( $this, 'pre_user_query' ) );
 			$users = get_users( $args );
 			remove_action( 'pre_user_query', array( $this, 'pre_user_query' ) );
@@ -98,8 +90,18 @@ class PP_EU_Export_Users {
 
 			$exclude_data = apply_filters( 'pp_eu_exclude_data', array() );
 
-			$first_user = reset( $users );
-			$fields = array_keys( (array) $first_user->data );
+			global $wpdb;
+
+			$data_keys = array(
+				'ID', 'user_login', 'user_pass',
+				'user_nicename', 'user_email', 'user_url',
+				'user_registered', 'user_activation_key', 'user_status',
+				'display_name'
+			);
+			$meta_keys = $wpdb->get_results( "SELECT distinct(meta_key) FROM $wpdb->usermeta" );
+			$meta_keys = wp_list_pluck( $meta_keys, 'meta_key' );
+			$fields = array_merge( $data_keys, $meta_keys );
+
 			$headers = array();
 			foreach ( $fields as $key => $field ) {
 				if ( in_array( $field, $exclude_data ) )
@@ -112,9 +114,9 @@ class PP_EU_Export_Users {
 			foreach ( $users as $user ) {
 				$data = array();
 				foreach ( $fields as $field ) {
-					$user_data = (array) $user->data;
-					$value = $user_data[$field];
-					$data[] = is_array( $value ) ? '"' . serialize( $value ) . '"' : '"' . $value . '"';
+					$value = isset( $user->{$field} ) ? $user->{$field} : '';
+					$value = is_array( $value ) ? serialize( $value ) : $value;
+					$data[] = '"' . str_replace( '"', '""', $value ) . '"';
 				}
 				echo implode( ',', $data ) . "\n";
 			}
@@ -180,10 +182,7 @@ class PP_EU_Export_Users {
 	}
 
 	public function exclude_data() {
-		$exclude = array( 'user_pass', 'user_activation_key', 'user_status', 'rich_editing', 'comment_shortcuts', 'admin_color', 'use_ssl', 'show_admin_bar_front', 'show_admin_bar_admin', 'wp_capabilities', 'wp_user_level', 'wp_usersettings', 'wp_usersettingstime', 'wp_dashboard_quick_press_last_post_id', 'metaboxorder_dashboard', 'screen_layout_dashboard', 'closedpostboxes_dashboard', 'metaboxhidden_dashboard', 'metaboxhidden_forum', 'closedpostboxes_forum', 'plugins_last_view', 'metaboxhidden_program', 'closedpostboxes_program', 'metaboxhidden_navmenus', 'managenavmenuscolumnshidden', 'user_level', 'user_firstname', 'user_lastname', 'user_description'  );
-
-		if ( ! is_multisite() )
-			$exclude = array_merge( $exclude, array( 'spam', 'deleted', 'primary_blog', 'source_domain' ) );
+		$exclude = array( 'user_pass', 'user_activation_key' );
 
 		return $exclude;
 	}
