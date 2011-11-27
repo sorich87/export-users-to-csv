@@ -3,7 +3,7 @@ Contributors: sorich87
 Tags: user, users, csv, batch, export, exporter, admin
 Requires at least: 3.2
 Tested up to: 3.3
-Stable tag: 0.2
+Stable tag: 0.3
 
 Export users data and metadata to a csv file
 
