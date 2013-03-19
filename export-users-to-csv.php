@@ -118,8 +118,10 @@ class PP_EU_Export_Users {
 
 			if ( empty( $_POST['pp_eu_users_fields'] ) )
 				$fields = $this->get_fields();
-			else
+			else {
 				$fields = $_POST['pp_eu_users_fields'];
+				update_user_meta( get_current_user_id(), 'pp_eu_users_fields', $fields );
+			}
 
 			//echo headers
 			fputcsv( $output, $fields );
@@ -155,7 +157,9 @@ class PP_EU_Export_Users {
 		echo '<div class="updated"><p><strong>' . __( 'No user found.', 'export-users-to-csv' ) . '</strong></p></div>';
 	}
 
-	$fields = $this->get_fields();
+	$fields   = $this->get_fields();
+	$selected = get_user_meta( get_current_user_id(), 'pp_eu_users_fields', true );
+	$selected = ! empty( $selected ) ? $selected : array();
 
 	?>
 	<form method="post" action="" enctype="multipart/form-data">
@@ -199,7 +203,7 @@ class PP_EU_Export_Users {
 					<fieldset id="pp_eu_users_fields_wrapper">
 						<?php
 						foreach ( $fields as $field ) {
-							echo sprintf( '<label for="pp_eu_field_%1$s"><input type="checkbox" name="pp_eu_users_fields[]" id="pp_eu_field_%1$s" value="%1$s"> %2$s</label><br/>', esc_attr( $field ), esc_html( $field ) );
+							echo sprintf( '<label for="pp_eu_field_%1$s"><input type="checkbox" name="pp_eu_users_fields[]" id="pp_eu_field_%1$s" %2$s value="%1$s"> %3$s</label><br/>', esc_attr( $field ), checked( in_array( $field, $selected ), true, false ), esc_html( $field ) );
 						}
 
 						?>
@@ -216,7 +220,7 @@ class PP_EU_Export_Users {
 	}
 
 	public function exclude_data() {
-		$exclude = array( 'user_pass', 'user_activation_key' );
+		$exclude = array( 'user_pass', 'user_activation_key', 'pp_eu_users_fields' );
 
 		return $exclude;
 	}
