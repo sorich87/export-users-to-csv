@@ -110,7 +110,7 @@ class PP_EU_Export_Users {
 				if ( in_array( $field, $exclude_data ) )
 					unset( $fields[$key] );
 				else
-					$headers[] = '"' . $field . '"';
+					$headers[] = '"' . strtolower( $field ) . '"';
 			}
 			echo implode( ',', $headers ) . "\n";
 
