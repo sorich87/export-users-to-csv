@@ -123,8 +123,11 @@ class PP_EU_Export_Users {
 				update_user_meta( get_current_user_id(), 'pp_eu_users_fields', $fields );
 			}
 
+			// Prevent Excel bug: http://support.microsoft.com/kb/323626 
+			$titles = array_map( 'strtolower', $fields );
+
 			//echo headers
-			fputcsv( $output, $fields );
+			fputcsv( $output, $titles );
 
 			foreach ( $users as $user ) {
 				$data = array();
