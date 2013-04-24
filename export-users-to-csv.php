@@ -58,6 +58,29 @@ class PP_EU_Export_Users {
 		add_users_page( __( 'Export to CSV', 'export-users-to-csv' ), __( 'Export to CSV', 'export-users-to-csv' ), 'list_users', 'export-users-to-csv', array( $this, 'users_page' ) );
 	}
 
+
+	/**
+	 * Returns all the different possible fields to export.
+	 *
+	 * @filter pp_eu_all_data with the full list of fields
+	 * @filter pp_eu_exclude_data to allow hiding fields from the export process
+	 *
+	 * @return array
+	 */
+	protected function get_fields() {
+		global $wpdb;
+
+		$data_keys = array( 'ID', 'user_login', 'user_pass', 'user_nicename', 'user_email', 'user_url', 'user_registered', 'user_activation_key', 'user_status', 'display_name' );
+
+		$meta_keys   = $wpdb->get_results( "SELECT distinct(meta_key) FROM $wpdb->usermeta" );
+		$meta_keys   = wp_list_pluck( $meta_keys, 'meta_key' );
+		$all_fields  = array_filter( array_merge( $data_keys, $meta_keys ) );
+		$hide_fields = apply_filters( 'pp_eu_exclude_data', array() );
+		$fields      = array_diff( $all_fields, $hide_fields );
+
+		return apply_filters( 'pp_eu_all_data', $fields );
+	}
+
 	/**
 	 * Process content of CSV file
 	 *
@@ -91,39 +114,31 @@ class PP_EU_Export_Users {
 			header( 'Content-Disposition: attachment; filename=' . $filename );
 			header( 'Content-Type: text/csv; charset=' . get_option( 'blog_charset' ), true );
 
-			$exclude_data = apply_filters( 'pp_eu_exclude_data', array() );
+			$output = fopen( 'php://output', 'w' );
 
-			global $wpdb;
-
-			$data_keys = array(
-				'ID', 'user_login', 'user_pass',
-				'user_nicename', 'user_email', 'user_url',
-				'user_registered', 'user_activation_key', 'user_status',
-				'display_name'
-			);
-			$meta_keys = $wpdb->get_results( "SELECT distinct(meta_key) FROM $wpdb->usermeta" );
-			$meta_keys = wp_list_pluck( $meta_keys, 'meta_key' );
-			$fields = array_merge( $data_keys, $meta_keys );
-
-			$headers = array();
-			foreach ( $fields as $key => $field ) {
-				if ( in_array( $field, $exclude_data ) )
-					unset( $fields[$key] );
-				else
-					$headers[] = '"' . $field . '"';
+			if ( empty( $_POST['pp_eu_users_fields'] ) )
+				$fields = $this->get_fields();
+			else {
+				$fields = $_POST['pp_eu_users_fields'];
+				update_user_meta( get_current_user_id(), 'pp_eu_users_fields', $fields );
 			}
-			echo implode( ',', $headers ) . "\n";
+
+			// Prevent Excel bug: http://support.microsoft.com/kb/323626 
+			$titles = array_map( 'strtolower', $fields );
+
+			//echo headers
+			fputcsv( $output, $titles );
 
 			foreach ( $users as $user ) {
 				$data = array();
 				foreach ( $fields as $field ) {
 					$value = isset( $user->{$field} ) ? $user->{$field} : '';
-					$value = is_array( $value ) ? serialize( $value ) : $value;
-					$data[] = '"' . str_replace( '"', '""', $value ) . '"';
+					$data[] = is_array( $value ) ? serialize( $value ) : $value;
 				}
-				echo implode( ',', $data ) . "\n";
+				fputcsv( $output, $data );
 			}
 
+			fclose( $output );
 			exit;
 		}
 	}
@@ -144,6 +159,11 @@ class PP_EU_Export_Users {
 	if ( isset( $_GET['error'] ) ) {
 		echo '<div class="updated"><p><strong>' . __( 'No user found.', 'export-users-to-csv' ) . '</strong></p></div>';
 	}
+
+	$fields   = $this->get_fields();
+	$selected = get_user_meta( get_current_user_id(), 'pp_eu_users_fields', true );
+	$selected = ! empty( $selected ) ? $selected : array();
+
 	?>
 	<form method="post" action="" enctype="multipart/form-data">
 		<?php wp_nonce_field( 'pp-eu-export-users-users-page_export', '_wpnonce-pp-eu-export-users-users-page_export' ); ?>
@@ -175,6 +195,24 @@ class PP_EU_Export_Users {
 					</select>
 				</td>
 			</tr>
+
+			<tr valign="top">
+				<th scope="row"><label><?php _e( 'Fields to export', 'export-users-to-csv' ); ?></label>
+					<br /><br />
+					<p class="description"><a href="#" onclick="jQuery('#pp_eu_users_fields_wrapper input').attr('checked', 'checked');"><?php _e( 'Check all', 'export-users-to-csv' ); ?></a></p>
+					<p class="description"><a href="#" onclick="jQuery('#pp_eu_users_fields_wrapper input').removeAttr('checked');"><?php _e( 'Uncheck all', 'export-users-to-csv' ); ?></a></p>
+				</th>
+				<td>
+					<fieldset id="pp_eu_users_fields_wrapper">
+						<?php
+						foreach ( $fields as $field ) {
+							echo sprintf( '<label for="pp_eu_field_%1$s"><input type="checkbox" name="pp_eu_users_fields[]" id="pp_eu_field_%1$s" %2$s value="%1$s"> %3$s</label><br/>', esc_attr( $field ), checked( in_array( $field, $selected ), true, false ), esc_html( $field ) );
+						}
+
+						?>
+					</fieldset>
+				</td>
+			</tr>
 		</table>
 		<p class="submit">
 			<input type="hidden" name="_wp_http_referer" value="<?php echo $_SERVER['REQUEST_URI'] ?>" />
@@ -185,7 +223,7 @@ class PP_EU_Export_Users {
 	}
 
 	public function exclude_data() {
-		$exclude = array( 'user_pass', 'user_activation_key' );
+		$exclude = array( 'user_pass', 'user_activation_key', 'pp_eu_users_fields' );
 
 		return $exclude;
 	}
